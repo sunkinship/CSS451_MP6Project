@@ -9,9 +9,6 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance { get; private set; }
 
     private readonly string sliderValueStringFormat = "F4";
-    private readonly string noneSelectedText = "None";
-
-    [SerializeField] private TextMeshProUGUI selectionText;
 
     [Header("Transform Slider Values")]
     [SerializeField] private TextMeshProUGUI xText;
@@ -40,6 +37,10 @@ public class UIManager : MonoBehaviour
 
     public event Action OnStateChanged;
 
+    [Header("Resolution Settings")]
+    [SerializeField] private Slider resSlider;
+    [SerializeField] private TextMeshProUGUI resText;
+
     private void Awake()
     {
         Instance = this;
@@ -63,7 +64,6 @@ public class UIManager : MonoBehaviour
     {
         if (ObjectManager.Instance.mSelected == null)
         {
-            UpdateSelectionText(noneSelectedText);
             switch (currentMode)
             {
                 //case Mode.Translate:
@@ -82,7 +82,6 @@ public class UIManager : MonoBehaviour
         }
 
         Transform selected = ObjectManager.Instance.mSelected.transform;
-        UpdateSelectionText(selected.name);
 
         switch (currentMode)
         {
@@ -102,11 +101,6 @@ public class UIManager : MonoBehaviour
                 SliderZChangeWithoutNotif(selected.localScale.z);
                 break;
         }
-    }
-
-    private void UpdateSelectionText(string text)
-    {
-        selectionText.text = text;
     }
 
     #region TOGGLE MODE
@@ -252,6 +246,14 @@ public class UIManager : MonoBehaviour
                 ObjectManager.Instance.ScaleSelected(value, axis);
                 break;
         }
+    }
+    #endregion
+
+    #region RESOLUTION SLIDER
+    public void ResolutionSliderChanged(float value)
+    {
+        resText.text = resSlider.value.ToString();
+        MeshController.Instance.SetMesh((int)value);
     }
     #endregion
 }
