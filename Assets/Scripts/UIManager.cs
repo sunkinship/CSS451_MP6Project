@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
-
+    public GeneralCylinderMesh cylinderTarget;
     private readonly string sliderValueStringFormat = "F4";
 
     [Header("Transform Slider Values")]
@@ -41,6 +41,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Slider resSlider;
     [SerializeField] private TextMeshProUGUI resText;
 
+    [Header("cylinder Resolution Settings")]
+    [SerializeField] private Slider CylResSlider;
+    [SerializeField] private TextMeshProUGUI CylResText;
+
+    [Header("cylinder Rotation Settings")]
+    [SerializeField] private Slider CylRotSlider;
+    [SerializeField] private TextMeshProUGUI CylRotText;
     private void Awake()
     {
         Instance = this;
@@ -204,6 +211,7 @@ public class UIManager : MonoBehaviour
         zText.text = zSlider.value.ToString(sliderValueStringFormat);
         UpdateObject(zSlider.value, Axis.Z);
     }
+    
 
     private void SliderXChangeWithoutNotif(float value)
     {
@@ -254,6 +262,39 @@ public class UIManager : MonoBehaviour
     {
         resText.text = resSlider.value.ToString();
         MeshController.Instance.SetMesh((int)value);
+    }
+    #endregion
+
+    #region CYLINDER RESOLUTION SLIDER
+    public void CylResSliderChanged()
+    {
+
+
+        CylResText.text = ((int)CylResSlider.value).ToString();
+        CylResolutionSliderChanged(CylResSlider.value);
+    }
+
+    public void CylResolutionSliderChanged(float value)
+    {
+        int newRes = Mathf.Max(2, Mathf.RoundToInt(value));
+        cylinderTarget.SetResolution(newRes);
+        var vsm = cylinderTarget.GetComponent<CylinderVertexSelectionManager>();
+        if (vsm != null) vsm.Rebuild();
+    }
+    #endregion
+
+    #region CYLINDER ROTATION SLIDER
+    public void CylRotSliderChanged()
+    {
+
+
+        CylRotText.text = ((int)CylRotSlider.value).ToString();
+        CylRotationSliderChanged((int)CylRotSlider.value);
+    }
+
+    public void CylRotationSliderChanged(int value)
+    {
+        cylinderTarget.SetSweepDegrees(value);
     }
     #endregion
 }
