@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db7502c5e5250cd478dd484f791e6105, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  cylinderTarget: {fileID: 0}
   xText: {fileID: 7077596015213897416}
   yText: {fileID: 4653317745097177125}
   zText: {fileID: 6999318438118672738}
@@ -162,6 +163,10 @@ MonoBehaviour:
   scaleToggle: {fileID: 842060722422564110}
   resSlider: {fileID: 1428311694}
   resText: {fileID: 1783154997}
+  CylResSlider: {fileID: 0}
+  CylResText: {fileID: 0}
+  CylRotSlider: {fileID: 0}
+  CylRotText: {fileID: 0}
 --- !u!4 &26354872
 Transform:
   m_ObjectHideFlags: 0
@@ -430,6 +435,60 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &736254599
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 736254601}
+  - component: {fileID: 736254600}
+  m_Layer: 0
+  m_Name: Vert Controller Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &736254600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736254599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae07ac96fbcec0845af825863269d61e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  controllerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  controlAxisMask:
+    serializedVersion: 2
+    m_Bits: 128
+  controlAxis: {fileID: 6975355063496996630, guid: a3051e6141aad47449808e6fc75f4e76, type: 3}
+  axisMoveSpeed: 5
+  controllerSelected: {fileID: 0}
+  axisSelected: {fileID: 0}
+--- !u!4 &736254601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736254599}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &821458226
 GameObject:
   m_ObjectHideFlags: 0
@@ -1050,7 +1109,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: 72b96d387145d214eafc1c9f0166d595, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1108,6 +1167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 3
+  controller: {fileID: 6975749564922035240, guid: a693ba5de09d9b646b7f9156093205a4, type: 3}
 --- !u!1 &1771335341
 GameObject:
   m_ObjectHideFlags: 0
@@ -5434,6 +5494,7 @@ SceneRoots:
   - {fileID: 1123409087}
   - {fileID: 26354872}
   - {fileID: 691558347}
+  - {fileID: 736254601}
   - {fileID: 1820493313717978439}
   - {fileID: 5014818056829819431}
   - {fileID: 1728586365}

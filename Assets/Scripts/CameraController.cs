@@ -1,20 +1,25 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+    public static CameraController Instance;
+
     public Transform LookAtPosition;
 
+    //used in vert controller to prevent controller selection when cam is being controlled already
+    public bool InCamControlMode { get; private set; } = false;
+
     //control modes
-    private enum ControlMode { None, Tumble, Pan };
-    private ControlMode controlMode = ControlMode.None;
+    private enum CamControlMode { None, Tumble, Pan };
+    private CamControlMode camControlMode = CamControlMode.None;
     private bool Zooming = false;
 
-    private Vector3 lastMousePositioTumble;
+    private Vector3 lastMousePosition;
 
     //tumble
-    
     private bool leftMouseHeld => Input.GetMouseButton(0);
     private float orbitDirection = 1f;
     private float currentPitch = 0f;
@@ -38,6 +43,12 @@ public class CameraController : MonoBehaviour
     private Vector3 startPos;
     private Quaternion startRot;
 
+    private void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+    }
+
     private void Start()
     {
         startPos = transform.position;
@@ -54,54 +65,56 @@ public class CameraController : MonoBehaviour
         if (Zooming)
             Zoom();
 
-        switch (controlMode)
+        switch (camControlMode)
         {
-            case ControlMode.None:
+            case CamControlMode.None:
                 break;
-            case ControlMode.Tumble:
+            case CamControlMode.Tumble:
                 if (leftMouseHeld)
                     Tumble();
                 break;
-            case ControlMode.Pan:
+            case CamControlMode.Pan:
                 if (rightMouseHeld)
                     Pan();
                 break;
         }
-
-        //SetLine();
     }
     
     private void SetModes()
     {
+        //only allow camera control when left alt is held
         if (!Input.GetKey(KeyCode.LeftAlt))
         {
-            controlMode = ControlMode.None;
+            camControlMode = CamControlMode.None;
             Zooming = false;
+            InCamControlMode = false;
             return;
         }
+
+        InCamControlMode = true;
 
         Zooming = Input.mouseScrollDelta.y != 0;
 
         if (Input.GetMouseButtonDown(0))
         {
-            lastMousePositioTumble = Input.mousePosition;
-            controlMode = ControlMode.Tumble;
+            lastMousePosition = Input.mousePosition;
+            camControlMode = CamControlMode.Tumble;
             return;
         }
 
         if (Input.GetMouseButtonDown(1))
         {
-            lastMousePositioTumble = Input.mousePosition;
-            controlMode = ControlMode.Pan;
+            lastMousePosition = Input.mousePosition;
+            camControlMode = CamControlMode.Pan;
             return;
         }
     }
 
     private void Tumble()
     {
-        Vector3 delta = Input.mousePosition - lastMousePositioTumble;
+        Vector3 delta = Input.mousePosition - lastMousePosition;
         ComputeOrbit(delta);
-        lastMousePositioTumble = Input.mousePosition;
+        lastMousePosition = Input.mousePosition;
     }
 
     private void ComputeOrbit(Vector3 delta)
@@ -140,7 +153,7 @@ public class CameraController : MonoBehaviour
 
     private void Pan()
     {
-        Vector3 delta = Input.mousePosition - lastMousePositioTumble;
+        Vector3 delta = Input.mousePosition - lastMousePosition;
         Vector3 moveDirection = new Vector3(-delta.x, -delta.y, 0);
 
         Vector3 panOffset = (transform.right * moveDirection.x + transform.up * moveDirection.y) * (panSpeed * Time.deltaTime);
@@ -151,7 +164,7 @@ public class CameraController : MonoBehaviour
         //transform.Translate(panSpeed * Time.deltaTime * moveDirection);
         //LookAtPosition.Translate(panSpeed * Time.deltaTime * moveDirection);
 
-        lastMousePositioTumble = Input.mousePosition;
+        lastMousePosition = Input.mousePosition;
     }
 
     private void Zoom()
