@@ -16,12 +16,16 @@ public class MeshController : MonoBehaviour
 
     private GameObject[] controllers;
     private GameObject[] normalLines;
-
+    private Vector2[] originalUVs;  
+    private Vector2[] currentUVs;
     public bool ControllersVisible { get; private set; } = false;
 
-    private void Awake()
+    public void Awake()
     {
         Instance = this;
+        mesh = GetComponent<MeshFilter>().mesh;
+        originalUVs = mesh.uv.Clone() as Vector2[];
+        currentUVs = mesh.uv.Clone() as Vector2[];
     }
 
     private void Start()
@@ -57,6 +61,22 @@ public class MeshController : MonoBehaviour
         }
 
         mesh.vertices = vertices;
+        Vector2[] uvs = new Vector2[vertexCount];
+        float inv = (resolution > 1) ? 1f / (resolution - 1) : 0f;
+        for (int row = 0; row < resolution; ++row)
+        {
+            for (int col = 0; col < resolution; ++col)
+            {
+                int idx = row * resolution + col;
+                float u = col * inv;
+                float v = row * inv;
+                uvs[idx] = new Vector2(u, v);
+            }
+        }
+        originalUVs = (Vector2[])uvs.Clone();
+        currentUVs = (Vector2[])uvs.Clone();
+
+        mesh.uv = currentUVs;
 
         //set triangles
         int currentTriangleVertIndex = 0;
@@ -86,7 +106,6 @@ public class MeshController : MonoBehaviour
         RecalculateNormals();
 
         onMeshUpdated?.Invoke();
-
         InitControllers(vertices, mesh.normals);
     }
 
@@ -181,6 +200,23 @@ public class MeshController : MonoBehaviour
             normalLines[i].transform.localRotation = Quaternion.FromToRotation(Vector3.up, mesh.normals[i]);
         }
     }
+    //added UVTRS application function for mesh UV manipulation
+    public void ApplyUVTRS(Vector2 translation, float rotationDeg, Vector2 scale)
+    {
+        if (originalUVs == null || originalUVs.Length == 0)
+            return;
+
+        Matrix3x3 m = Matrix3x3Helpers.CreateTRS(translation, rotationDeg, scale);
+
+        if (currentUVs == null || currentUVs.Length != originalUVs.Length)
+            currentUVs = new Vector2[originalUVs.Length];
+
+        for (int i = 0; i < originalUVs.Length; ++i)
+            currentUVs[i] = m * originalUVs[i];
+
+        mesh.uv = currentUVs;
+    }
+
 
     #region UTIL
     private int GetVertIndexFromRowCol(int row, int col)

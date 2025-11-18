@@ -1,13 +1,17 @@
 using System;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+//using UnityEngine.UIElements;
+
 
 public class UIManager : MonoBehaviour
 {
+    //edited to include UV manipulation functionality
     public static UIManager Instance { get; private set; }
-    public GeneralCylinderMesh cylinderTarget;
+
+    public CylinderController cylinderTarget;
+
     private readonly string sliderValueStringFormat = "F4";
 
     [Header("Transform Slider Values")]
@@ -15,16 +19,16 @@ public class UIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI yText;
     [SerializeField] private TextMeshProUGUI zText;
 
-    [Header("Transform Sliders")]
+    [Header("Transform Sliders (UV Sliders)")]
     [SerializeField] private Slider xSlider;
     [SerializeField] private Slider ySlider;
     [SerializeField] private Slider zSlider;
 
     private readonly Vector2 translateRange = new Vector2(-10, 10);
     private readonly Vector2 rotateRange = new Vector2(-180, 180);
-    private readonly Vector2 scaleRange = new Vector2(0.1f, 5);
+    private readonly Vector2 scaleRange = new Vector2(0.1f, 5f);
 
-    [Header("Toggles")]
+    [Header("Toggles (UV Modes)")]
     [SerializeField] private Toggle translateToggle;
     [SerializeField] private Toggle rotateToggle;
     [SerializeField] private Toggle scaleToggle;
@@ -41,13 +45,14 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Slider resSlider;
     [SerializeField] private TextMeshProUGUI resText;
 
-    [Header("cylinder Resolution Settings")]
+    [Header("Cylinder Resolution Settings")]
     [SerializeField] private Slider CylResSlider;
     [SerializeField] private TextMeshProUGUI CylResText;
 
-    [Header("cylinder Rotation Settings")]
+    [Header("Cylinder Rotation Settings")]
     [SerializeField] private Slider CylRotSlider;
     [SerializeField] private TextMeshProUGUI CylRotText;
+
     private void Awake()
     {
         Instance = this;
@@ -56,7 +61,9 @@ public class UIManager : MonoBehaviour
 
     private void Start()
     {
-        rotateToggle.isOn = true;
+        translateToggle.onValueChanged.AddListener(val => { if (val) SetTranslateMode(); });
+        rotateToggle.onValueChanged.AddListener(val => { if (val) SetRotateMode(); });
+        scaleToggle.onValueChanged.AddListener(val => { if (val) SetScaleMode(); });
         SetRotateMode();
     }
 
@@ -73,7 +80,6 @@ public class UIManager : MonoBehaviour
         {
             switch (currentMode)
             {
-                //case Mode.Translate:
                 case Mode.Rotate:
                     SliderXChangeWithoutNotif(0);
                     SliderYChangeWithoutNotif(0);
@@ -83,6 +89,11 @@ public class UIManager : MonoBehaviour
                     SliderXChangeWithoutNotif(1);
                     SliderYChangeWithoutNotif(1);
                     SliderZChangeWithoutNotif(1);
+                    break;
+                case Mode.Translate:
+                    SliderXChangeWithoutNotif(0);
+                    SliderYChangeWithoutNotif(0);
+                    SliderZChangeWithoutNotif(0);
                     break;
             }
             return;
@@ -110,19 +121,18 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    #region TOGGLE MODE
+    #region MODE TOGGLES
     public void SetTranslateMode()
     {
         if (currentMode == Mode.Translate)
         {
-            translateToggle.isOn = true;
+            translateToggle.SetIsOnWithoutNotify(true);
             return;
         }
 
-        currentMode = Mode.None;
-
-        rotateToggle.isOn = false;
-        scaleToggle.isOn = false;
+        translateToggle.SetIsOnWithoutNotify(true);
+        rotateToggle.SetIsOnWithoutNotify(false);
+        scaleToggle.SetIsOnWithoutNotify(false);
 
         xSlider.minValue = translateRange.x;
         xSlider.maxValue = translateRange.y;
@@ -132,7 +142,6 @@ public class UIManager : MonoBehaviour
         zSlider.maxValue = translateRange.y;
 
         currentMode = Mode.Translate;
-
         StateChanged();
     }
 
@@ -140,15 +149,14 @@ public class UIManager : MonoBehaviour
     {
         if (currentMode == Mode.Rotate)
         {
-            rotateToggle.isOn = true;
+            rotateToggle.SetIsOnWithoutNotify(true);
             return;
         }
 
-        currentMode = Mode.None;
+        translateToggle.SetIsOnWithoutNotify(false);
+        rotateToggle.SetIsOnWithoutNotify(true);
+        scaleToggle.SetIsOnWithoutNotify(false);
 
-        translateToggle.isOn = false;
-        scaleToggle.isOn = false;
-        
         xSlider.minValue = rotateRange.x;
         xSlider.maxValue = rotateRange.y;
         ySlider.minValue = rotateRange.x;
@@ -157,7 +165,6 @@ public class UIManager : MonoBehaviour
         zSlider.maxValue = rotateRange.y;
 
         currentMode = Mode.Rotate;
-
         StateChanged();
     }
 
@@ -165,14 +172,13 @@ public class UIManager : MonoBehaviour
     {
         if (currentMode == Mode.Scale)
         {
-            scaleToggle.isOn = true;
+            scaleToggle.SetIsOnWithoutNotify(true);
             return;
         }
 
-        currentMode = Mode.None;
-
-        translateToggle.isOn = false;
-        rotateToggle.isOn = false;
+        translateToggle.SetIsOnWithoutNotify(false);
+        rotateToggle.SetIsOnWithoutNotify(false);
+        scaleToggle.SetIsOnWithoutNotify(true);
 
         xSlider.minValue = scaleRange.x;
         xSlider.maxValue = scaleRange.y;
@@ -182,36 +188,31 @@ public class UIManager : MonoBehaviour
         zSlider.maxValue = scaleRange.y;
 
         currentMode = Mode.Scale;
-
         StateChanged();
     }
     #endregion
 
-    #region TRASNFORM SLIDER
+    #region SLIDER EVENTS (UV TRS)
     public void XSliderChanged()
     {
         CheckIfAxisChanged(Axis.X);
-
         xText.text = xSlider.value.ToString(sliderValueStringFormat);
-        UpdateObject(xSlider.value, Axis.X);
+        UpdateUVTRS();
     }
 
     public void YSliderChanged()
     {
         CheckIfAxisChanged(Axis.Y);
-
         yText.text = ySlider.value.ToString(sliderValueStringFormat);
-        UpdateObject(ySlider.value, Axis.Y);
+        UpdateUVTRS();
     }
 
     public void ZSliderChanged()
     {
         CheckIfAxisChanged(Axis.Z);
-
         zText.text = zSlider.value.ToString(sliderValueStringFormat);
-        UpdateObject(zSlider.value, Axis.Z);
+        UpdateUVTRS();
     }
-    
 
     private void SliderXChangeWithoutNotif(float value)
     {
@@ -240,54 +241,60 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    private void UpdateObject(float value, Axis axis)
+    private void UpdateUVTRS()
     {
+        Vector2 translation = Vector2.zero;
+        Vector2 scale = Vector2.one;
+        float rotation = 0f;
+
         switch (currentMode)
         {
             case Mode.Translate:
-                ObjectManager.Instance.TranslateSelected(value, axis);
+                translation = new Vector2(xSlider.value, ySlider.value);
                 break;
-            case Mode.Rotate:
-                ObjectManager.Instance.RotateSelected(value, axis);
-                break;
+
             case Mode.Scale:
-                ObjectManager.Instance.ScaleSelected(value, axis);
+                scale = new Vector2(xSlider.value, ySlider.value);
+                break;
+
+            case Mode.Rotate:
+                rotation = zSlider.value;
                 break;
         }
+
+        MeshController.Instance.ApplyUVTRS(translation, rotation, scale);
+
+        xText.text = xSlider.value.ToString("F2");
+        yText.text = ySlider.value.ToString("F2");
+        zText.text = zSlider.value.ToString("F2");
     }
     #endregion
 
     #region RESOLUTION SLIDER
     public void ResolutionSliderChanged(float value)
     {
-        resText.text = resSlider.value.ToString();
+        resText.text = ((int)value).ToString();
         MeshController.Instance.SetMesh((int)value);
     }
     #endregion
 
-    #region CYLINDER RESOLUTION SLIDER
+    #region CYLINDER RESOLUTION
     public void CylResSliderChanged()
     {
-
-
         CylResText.text = ((int)CylResSlider.value).ToString();
         CylResolutionSliderChanged(CylResSlider.value);
     }
 
     public void CylResolutionSliderChanged(float value)
     {
-        int newRes = Mathf.Max(2, Mathf.RoundToInt(value));
+        int newRes = Mathf.Max(4, Mathf.RoundToInt(value));
         cylinderTarget.SetResolution(newRes);
-        var vsm = cylinderTarget.GetComponent<CylinderVertexSelectionManager>();
-        if (vsm != null) vsm.Rebuild();
     }
     #endregion
 
-    #region CYLINDER ROTATION SLIDER
+    #region CYLINDER ROTATION
     public void CylRotSliderChanged()
     {
-
-
         CylRotText.text = ((int)CylRotSlider.value).ToString();
         CylRotationSliderChanged((int)CylRotSlider.value);
     }
