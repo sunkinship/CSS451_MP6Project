@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    //edited to include UV manipulation functionality
+    //edited to include UV manipulation functionality and cylinder controls
     public static UIManager Instance { get; private set; }
 
     public CylinderController cylinderTarget;
@@ -35,6 +35,12 @@ public class UIManager : MonoBehaviour
 
     private enum Mode { None, Translate, Rotate, Scale }
     private Mode currentMode = Mode.None;
+    private bool suppressUVUpdate = false;
+    // Persistent UV TRS values
+    private Vector2 savedTranslation = Vector2.zero;
+    private Vector2 savedScale = Vector2.one;
+    private float savedRotation = 0f;
+
 
     public enum Axis { None, X, Y, Z }
     private Axis lastChangedAxis = Axis.None;
@@ -56,7 +62,6 @@ public class UIManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
-        OnStateChanged += SelectionUpdated;
     }
 
     private void Start()
@@ -67,59 +72,10 @@ public class UIManager : MonoBehaviour
         SetRotateMode();
     }
 
-    private void OnDisable()
-    {
-        OnStateChanged -= SelectionUpdated;
-    }
-
     public void StateChanged() => OnStateChanged?.Invoke();
 
-    public void SelectionUpdated()
-    {
-        if (ObjectManager.Instance.mSelected == null)
-        {
-            switch (currentMode)
-            {
-                case Mode.Rotate:
-                    SliderXChangeWithoutNotif(0);
-                    SliderYChangeWithoutNotif(0);
-                    SliderZChangeWithoutNotif(0);
-                    break;
-                case Mode.Scale:
-                    SliderXChangeWithoutNotif(1);
-                    SliderYChangeWithoutNotif(1);
-                    SliderZChangeWithoutNotif(1);
-                    break;
-                case Mode.Translate:
-                    SliderXChangeWithoutNotif(0);
-                    SliderYChangeWithoutNotif(0);
-                    SliderZChangeWithoutNotif(0);
-                    break;
-            }
-            return;
-        }
 
-        Transform selected = ObjectManager.Instance.mSelected.transform;
 
-        switch (currentMode)
-        {
-            case Mode.Translate:
-                SliderXChangeWithoutNotif(selected.localPosition.x);
-                SliderYChangeWithoutNotif(selected.localPosition.y);
-                SliderZChangeWithoutNotif(selected.localPosition.z);
-                break;
-            case Mode.Rotate:
-                SliderXChangeWithoutNotif(0);
-                SliderYChangeWithoutNotif(0);
-                SliderZChangeWithoutNotif(0);
-                break;
-            case Mode.Scale:
-                SliderXChangeWithoutNotif(selected.localScale.x);
-                SliderYChangeWithoutNotif(selected.localScale.y);
-                SliderZChangeWithoutNotif(selected.localScale.z);
-                break;
-        }
-    }
 
     #region MODE TOGGLES
     public void SetTranslateMode()
@@ -130,20 +86,27 @@ public class UIManager : MonoBehaviour
             return;
         }
 
+        currentMode = Mode.Translate;
+        xSlider.minValue = translateRange.x; xSlider.maxValue = translateRange.y;
+        ySlider.minValue = translateRange.x; ySlider.maxValue = translateRange.y;
+        zSlider.minValue = translateRange.x; zSlider.maxValue = translateRange.y;
+
         translateToggle.SetIsOnWithoutNotify(true);
         rotateToggle.SetIsOnWithoutNotify(false);
         scaleToggle.SetIsOnWithoutNotify(false);
 
-        xSlider.minValue = translateRange.x;
-        xSlider.maxValue = translateRange.y;
-        ySlider.minValue = translateRange.x;
-        ySlider.maxValue = translateRange.y;
-        zSlider.minValue = translateRange.x;
-        zSlider.maxValue = translateRange.y;
+        suppressUVUpdate = true;
+        SliderXChangeWithoutNotif(savedTranslation.x);
+        SliderYChangeWithoutNotif(savedTranslation.y);
+        SliderZChangeWithoutNotif(0f);
+        suppressUVUpdate = false;
 
-        currentMode = Mode.Translate;
-        StateChanged();
+        UpdateSliderInteractivity();
+
     }
+
+
+
 
     public void SetRotateMode()
     {
@@ -153,20 +116,29 @@ public class UIManager : MonoBehaviour
             return;
         }
 
+        currentMode = Mode.Rotate;
+
+        // Restore min/max
+        xSlider.minValue = rotateRange.x; xSlider.maxValue = rotateRange.y;
+        ySlider.minValue = rotateRange.x; ySlider.maxValue = rotateRange.y;
+        zSlider.minValue = rotateRange.x; zSlider.maxValue = rotateRange.y;
+
         translateToggle.SetIsOnWithoutNotify(false);
         rotateToggle.SetIsOnWithoutNotify(true);
         scaleToggle.SetIsOnWithoutNotify(false);
 
-        xSlider.minValue = rotateRange.x;
-        xSlider.maxValue = rotateRange.y;
-        ySlider.minValue = rotateRange.x;
-        ySlider.maxValue = rotateRange.y;
-        zSlider.minValue = rotateRange.x;
-        zSlider.maxValue = rotateRange.y;
+        suppressUVUpdate = true;
+        SliderXChangeWithoutNotif(0f);
+        SliderYChangeWithoutNotif(0f);
+        SliderZChangeWithoutNotif(0f);
+        suppressUVUpdate = false;
 
-        currentMode = Mode.Rotate;
-        StateChanged();
+        UpdateSliderInteractivity();
+
     }
+
+
+
 
     public void SetScaleMode()
     {
@@ -176,20 +148,57 @@ public class UIManager : MonoBehaviour
             return;
         }
 
+        currentMode = Mode.Scale;
+
+        suppressUVUpdate = true;
+        SliderXChangeWithoutNotif(savedScale.x);
+        SliderYChangeWithoutNotif(savedScale.y);
+        SliderZChangeWithoutNotif(1f);
+        suppressUVUpdate = false;
+        // Restore min/max
+        xSlider.minValue = scaleRange.x; xSlider.maxValue = scaleRange.y;
+        ySlider.minValue = scaleRange.x; ySlider.maxValue = scaleRange.y;
+        zSlider.minValue = scaleRange.x; zSlider.maxValue = scaleRange.y;
+
         translateToggle.SetIsOnWithoutNotify(false);
         rotateToggle.SetIsOnWithoutNotify(false);
         scaleToggle.SetIsOnWithoutNotify(true);
+        UpdateSliderInteractivity();
 
-        xSlider.minValue = scaleRange.x;
-        xSlider.maxValue = scaleRange.y;
-        ySlider.minValue = scaleRange.x;
-        ySlider.maxValue = scaleRange.y;
-        zSlider.minValue = scaleRange.x;
-        zSlider.maxValue = scaleRange.y;
-
-        currentMode = Mode.Scale;
-        StateChanged();
     }
+
+    private void UpdateSliderInteractivity()
+    {
+        switch (currentMode)
+        {
+            case Mode.Translate:
+                xSlider.interactable = true;
+                ySlider.interactable = true;
+                zSlider.interactable = false; // Z not used for translation
+                break;
+
+            case Mode.Rotate:
+                xSlider.interactable = false;
+                ySlider.interactable = false;
+                zSlider.interactable = true;  // Only Z is used for rotation
+                break;
+
+            case Mode.Scale:
+                xSlider.interactable = true;
+                ySlider.interactable = true;
+                zSlider.interactable = false; // Z not used for scaling
+                break;
+
+            case Mode.None:
+            default:
+                xSlider.interactable = true;
+                ySlider.interactable = true;
+                zSlider.interactable = true;
+                break;
+        }
+    }
+
+
     #endregion
 
     #region SLIDER EVENTS (UV TRS)
@@ -243,31 +252,29 @@ public class UIManager : MonoBehaviour
 
     private void UpdateUVTRS()
     {
-        Vector2 translation = Vector2.zero;
-        Vector2 scale = Vector2.one;
-        float rotation = 0f;
+        if (suppressUVUpdate)
+            return;
 
         switch (currentMode)
         {
             case Mode.Translate:
-                translation = new Vector2(xSlider.value, ySlider.value);
+                savedTranslation = new Vector2(xSlider.value, ySlider.value);
                 break;
 
             case Mode.Scale:
-                scale = new Vector2(xSlider.value, ySlider.value);
+                savedScale = new Vector2(xSlider.value, ySlider.value);
                 break;
 
             case Mode.Rotate:
-                rotation = zSlider.value;
+                savedRotation = zSlider.value;
                 break;
         }
 
-        MeshController.Instance.ApplyUVTRS(translation, rotation, scale);
-
-        xText.text = xSlider.value.ToString("F2");
-        yText.text = ySlider.value.ToString("F2");
-        zText.text = zSlider.value.ToString("F2");
+        MeshController.Instance.ApplyUVTRS(savedTranslation, savedRotation, savedScale);
     }
+
+
+
     #endregion
 
     #region RESOLUTION SLIDER
