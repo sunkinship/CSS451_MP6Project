@@ -10,8 +10,6 @@ public class UIManager : MonoBehaviour
     //edited to include UV manipulation functionality and cylinder controls
     public static UIManager Instance { get; private set; }
 
-    public CylinderController cylinderTarget;
-
     private readonly string sliderValueStringFormat = "F4";
 
     [Header("Transform Slider Values")]
@@ -272,43 +270,27 @@ public class UIManager : MonoBehaviour
 
         MeshController.Instance.ApplyUVTRS(savedTranslation, savedRotation, savedScale);
     }
-
-
-
     #endregion
 
-    #region RESOLUTION SLIDER
+    #region PLANE SLIDER
     public void ResolutionSliderChanged(float value)
     {
         resText.text = ((int)value).ToString();
-        MeshController.Instance.SetMesh((int)value);
+        MeshController.Instance.SetResolution((int)value);
     }
     #endregion
 
-    #region CYLINDER RESOLUTION
-    public void CylResSliderChanged()
-    {
-        CylResText.text = ((int)CylResSlider.value).ToString();
-        CylResolutionSliderChanged(CylResSlider.value);
-    }
-
+    #region CYLINDER SLIDER
     public void CylResolutionSliderChanged(float value)
     {
-        int newRes = Mathf.Max(4, Mathf.RoundToInt(value));
-        cylinderTarget.SetResolution(newRes);
-    }
-    #endregion
-
-    #region CYLINDER ROTATION
-    public void CylRotSliderChanged()
-    {
-        CylRotText.text = ((int)CylRotSlider.value).ToString();
-        CylRotationSliderChanged((int)CylRotSlider.value);
+        CylResText.text = ((int)value).ToString();
+        NewCylinderController.Instance.SetResolution((int)value);
     }
 
-    public void CylRotationSliderChanged(int value)
+    public void CylRotationSliderChanged(float value)
     {
-        cylinderTarget.SetSweepDegrees(value);
+        CylRotText.text = ((int)value).ToString();
+        NewCylinderController.Instance.SetSweepAngle((int)value);
     }
     #endregion
 }

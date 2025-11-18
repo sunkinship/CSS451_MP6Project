@@ -57,13 +57,13 @@ public class VertController : MonoBehaviour
     private void OnEnable()
     {
         MeshController.onMeshUpdated += OnMeshUpdated;
-        CylinderController.onMeshUpdated += OnMeshUpdated;
+        NewCylinderController.onMeshUpdated += OnMeshUpdated;
     }
 
     private void OnDisable()
     {
         MeshController.onMeshUpdated -= OnMeshUpdated;
-        CylinderController.onMeshUpdated -= OnMeshUpdated;
+        NewCylinderController.onMeshUpdated -= OnMeshUpdated;
     }
 
     private void Update()
@@ -84,9 +84,9 @@ public class VertController : MonoBehaviour
     private bool TryGetActiveController(out IActiveController active)
     {
         active = null;
-        if (CylinderController.Instance != null && CylinderController.Instance.gameObject.activeInHierarchy)
+        if (NewCylinderController.Instance != null && NewCylinderController.Instance.gameObject.activeInHierarchy)
         {
-            active = new CylinderActiveWrapper(CylinderController.Instance);
+            active = new CylinderActiveWrapper(NewCylinderController.Instance);
             return true;
         }
         if (MeshController.Instance != null)
@@ -197,6 +197,7 @@ public class VertController : MonoBehaviour
             MoveControllerZ();
         }
     }
+
     private Transform FindAxisTaggedTransform(Transform t)
     {
         if (t == null) return null;
@@ -343,8 +344,8 @@ public class VertController : MonoBehaviour
 
     private class CylinderActiveWrapper : IActiveController
     {
-        CylinderController cc;
-        public CylinderActiveWrapper(CylinderController c) { cc = c; }
+        NewCylinderController cc;
+        public CylinderActiveWrapper(NewCylinderController c) { cc = c; }
         public bool ControllersVisible => cc.ControllersVisible;
         public void ShowAllControllers() => cc.ShowAllControllers();
         public void HideAllControllers() => cc.HideAllControllers();

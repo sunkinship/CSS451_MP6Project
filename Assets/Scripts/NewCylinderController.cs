@@ -1,21 +1,29 @@
 using System;
 using UnityEngine;
 
-public class MeshController : MonoBehaviour
+public class NewCylinderController : MonoBehaviour
 {
-    public static MeshController Instance;
+    public static NewCylinderController Instance;
 
     public static Action onMeshUpdated;
 
     private Mesh mesh;
     private readonly float meshSize = 10;
 
-    [SerializeField] [Range(2, 20)] private int resolution = 3;
+    [SerializeField] private float radius = 3;
+    [SerializeField] private float height = 10;
+    [SerializeField][Range(4, 20)] private int resolution = 10;
+    [Range(10f, 360f)] [SerializeField] private float sweepDegrees = 275f;
     [SerializeField] private GameObject controller;
+
+    [Header("Controller visuals")]
+    public int selectableColumn = 0;
+    public Color selectableColor = Color.white;
+    public Color unselectableColor = Color.black;
 
     private GameObject[] controllers;
     private GameObject[] normalLines;
-    private Vector2[] originalUVs;  
+    private Vector2[] originalUVs;
     private Vector2[] currentUVs;
     public bool ControllersVisible { get; private set; } = false;
 
@@ -55,7 +63,7 @@ public class MeshController : MonoBehaviour
             for (int col = 0; col < resolution; col++)
             {
                 int index = (row * resolution) + col;
-                vertices[index] = new Vector3(currentPos.x + (col * distanceToNextVertex), 0, currentPos.y + (row * distanceToNextVertex));
+                vertices[index] = GetVertexPos(col, row);
             }
         }
 
@@ -103,6 +111,10 @@ public class MeshController : MonoBehaviour
 
         //calculate vertex normals
         RecalculateNormals();
+        for (int i = 0; i < mesh.vertices.Length; i++)
+        {
+            Debug.DrawRay(transform.TransformPoint(mesh.vertices[i]), transform.TransformDirection(mesh.normals[i]) * 0.5f, Color.red, 5f);
+        }
 
         onMeshUpdated?.Invoke();
         InitControllers(vertices, mesh.normals);
@@ -112,7 +124,7 @@ public class MeshController : MonoBehaviour
     {
         if (mesh == null)
             return;
- 
+
         int[] triangles = mesh.triangles;
         Vector3[] vertices = mesh.vertices;
         Vector3[] normals = new Vector3[vertices.Length];
@@ -168,13 +180,14 @@ public class MeshController : MonoBehaviour
             GameObject pivot = new GameObject("Normal Line"); //normal visuals
             pivot.transform.parent = controllers[i].transform;
             pivot.transform.localPosition = Vector3.zero;
-            pivot.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normals[i]);
 
             GameObject normalLine = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             normalLine.transform.parent = pivot.transform;
 
-            normalLine.transform.localPosition = new Vector3(0f, 1f, 0f);
-            normalLine.transform.localScale = new Vector3(0.05f, 1.15f, 0.05f);
+            pivot.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normals[i]);     
+
+            normalLine.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            normalLine.transform.localScale = new Vector3(0.05f, 0.5f, 0.05f);
             normalLines[i] = pivot;
         }
 
@@ -217,11 +230,25 @@ public class MeshController : MonoBehaviour
         mesh.uv = currentUVs;
     }
 
-
     #region UTIL
     private int GetVertIndexFromRowCol(int row, int col)
     {
         return row * resolution + col;
+    }
+
+    //get vertex position on cylinder
+    private Vector3 GetVertexPos(int col, int row)
+    {
+        int index = (row * resolution) + col;
+        float t = col / (resolution - 1f);
+        float angleDeg = t * sweepDegrees;
+        float angleRad = angleDeg * Mathf.Deg2Rad;
+
+        float x = Mathf.Cos(angleRad) * radius;
+        float z = Mathf.Sin(angleRad) * radius;
+        float y = (row / (resolution - 1f)) * height;
+
+        return new Vector3(x, y, z);
     }
 
     private Vector3 GetNormalOfTriangle(Vector3 p1, Vector3 p2, Vector3 p3)
@@ -253,6 +280,12 @@ public class MeshController : MonoBehaviour
     public void SetResolution(int resolution)
     {
         this.resolution = resolution;
+        SetMesh();
+    }
+
+    public void SetSweepAngle(int angle)
+    {
+        sweepDegrees = angle;
         SetMesh();
     }
 
