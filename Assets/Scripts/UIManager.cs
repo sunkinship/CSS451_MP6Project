@@ -57,6 +57,9 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Slider CylRotSlider;
     [SerializeField] private TextMeshProUGUI CylRotText;
 
+    [Header("Cylinder Selected Column Settings")]
+    [SerializeField] private Slider CylSelColSlider;
+    [SerializeField] private TextMeshProUGUI CylColText;
     private void Awake()
     {
         Instance = this;
@@ -291,6 +294,28 @@ public class UIManager : MonoBehaviour
     {
         CylRotText.text = ((int)value).ToString();
         NewCylinderController.Instance.SetSweepAngle((int)value);
+    }
+    private void OnEnable()
+    {
+        NewCylinderController.onResolutionChanged += UpdateSelectableColumnSliderMax;
+    }
+    private void OnDisable()
+    {
+        NewCylinderController.onResolutionChanged -= UpdateSelectableColumnSliderMax;
+    }
+    private void UpdateSelectableColumnSliderMax(int newResolution)
+    {
+        CylSelColSlider.maxValue = Mathf.Max(newResolution - 1, 0);
+
+        if (CylSelColSlider.value > CylSelColSlider.maxValue)
+            CylSelColSlider.value = CylSelColSlider.maxValue;
+
+        CylColText.text = ((int)CylSelColSlider.value).ToString();
+    }
+    public void CylSelColSliderChanged(float value)
+    {
+        CylColText.text = ((int)value).ToString();
+        NewCylinderController.Instance.SetSelectableColumn((int)value);
     }
     #endregion
 }

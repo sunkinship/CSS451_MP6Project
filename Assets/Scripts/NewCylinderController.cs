@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class NewCylinderController : MonoBehaviour
@@ -13,7 +14,7 @@ public class NewCylinderController : MonoBehaviour
     [SerializeField] private float radius = 3;
     [SerializeField] private float height = 10;
     [SerializeField][Range(4, 20)] private int resolution = 10;
-    [Range(10f, 360f)] [SerializeField] private float sweepDegrees = 275f;
+    [Range(10f, 360f)][SerializeField] private float sweepDegrees = 275f;
     [SerializeField] private GameObject controller;
 
     [Header("Controller visuals")]
@@ -25,6 +26,9 @@ public class NewCylinderController : MonoBehaviour
     private GameObject[] normalLines;
     private Vector2[] originalUVs;
     private Vector2[] currentUVs;
+    private Vector3[] lastControllerPositions;
+    public static Action<int> onResolutionChanged;
+
     public bool ControllersVisible { get; private set; } = false;
 
     public void Awake()
@@ -38,6 +42,7 @@ public class NewCylinderController : MonoBehaviour
     private void Start()
     {
         mesh = GetComponent<MeshFilter>().mesh;
+        selectableColumn = Mathf.Clamp(selectableColumn, 0, resolution - 1);
 
         SetMesh();
     }
@@ -149,7 +154,7 @@ public class NewCylinderController : MonoBehaviour
             normals[p3] += normal;
         }
 
-        //nornmalize each vertex normal
+        //normalize each vertex normal
         for (int i = 0; i < normals.Length; i++)
         {
             normals[i] = normals[i].normalized;
@@ -165,7 +170,8 @@ public class NewCylinderController : MonoBehaviour
         {
             for (int i = 0; i < controllers.Length; i++)
             {
-                Destroy(controllers[i]);
+                if (controllers[i] != null)
+                    Destroy(controllers[i]);
             }
         }
 
@@ -184,34 +190,103 @@ public class NewCylinderController : MonoBehaviour
             GameObject normalLine = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             normalLine.transform.parent = pivot.transform;
 
-            pivot.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normals[i]);     
+            pivot.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normals[i]);
 
             normalLine.transform.localPosition = new Vector3(0f, 0.5f, 0f);
             normalLine.transform.localScale = new Vector3(0.05f, 0.5f, 0.05f);
             normalLines[i] = pivot;
         }
-
+        lastControllerPositions = new Vector3[controllers.Length];
+        for (int i = 0; i < controllers.Length; i++)
+            lastControllerPositions[i] = controllers[i].transform.localPosition;
+        UpdateControllerVisuals();
         HideAllControllers();
     }
 
     //move mesh vertices to controller positions when user moves controllers
     private void MeshModified()
     {
-        //update vertices
+        if (controllers == null || controllers.Length == 0)
+            return;
+
         Vector3[] vertices = mesh.vertices;
+        HashSet<int> processedRows = new HashSet<int>();
+
         for (int i = 0; i < controllers.Length; i++)
         {
+            if (controllers[i] == null) continue;
+
+            Vector3 current = controllers[i].transform.localPosition;
+            Vector3 previous = lastControllerPositions != null ? lastControllerPositions[i] : current;
+
+            if (current == previous)
+                continue;
+
+            int row = i / resolution;
+            int col = i % resolution;
+
+            if (col == selectableColumn && !processedRows.Contains(row))
+            {
+                processedRows.Add(row);
+                float deltaY = current.y - previous.y;
+                Vector2 prevXZ = new Vector2(previous.x, previous.z);
+                Vector2 currXZ = new Vector2(current.x, current.z);
+                float oldRadius = prevXZ.magnitude;
+                float newRadius = currXZ.magnitude;
+                float radialDelta = newRadius - oldRadius;
+
+                for (int c = 0; c < resolution; c++)
+                {
+                    int idx = row * resolution + c;
+                    if (controllers[idx] == null) continue;
+
+                    if (idx == i)
+                    {
+                        continue;
+                    }
+
+                    Vector3 prevPos = lastControllerPositions[idx];
+                    Vector3 prevXZ3 = new Vector3(prevPos.x, 0f, prevPos.z);
+                    float prevMag = prevXZ3.magnitude;
+                    Vector3 dir;
+                    if (prevMag > 1e-5f)
+                        dir = prevXZ3 / prevMag;
+                    else
+                        dir = Vector3.right;
+
+                    Vector3 newPos = prevPos + new Vector3(0f, deltaY, 0f) + dir * radialDelta;
+                    controllers[idx].transform.localPosition = newPos;
+                }
+
+                for (int c = 0; c < resolution; c++)
+                {
+                    int idx = row * resolution + c;
+                    if (controllers[idx] == null) continue;
+                    lastControllerPositions[idx] = controllers[idx].transform.localPosition;
+                }
+            }
+            else
+            {
+                lastControllerPositions[i] = controllers[i].transform.localPosition;
+            }
+        }
+
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            if (controllers[i] == null) continue;
             vertices[i] = controllers[i].transform.localPosition;
         }
-        mesh.vertices = vertices;
 
-        //update normals and visual lines
+        mesh.vertices = vertices;
         RecalculateNormals();
+
         for (int i = 0; i < normalLines.Length; i++)
         {
+            if (normalLines[i] == null) continue;
             normalLines[i].transform.localRotation = Quaternion.FromToRotation(Vector3.up, mesh.normals[i]);
         }
     }
+
 
     //added UVTRS application function for mesh UV manipulation
     public void ApplyUVTRS(Vector2 translation, float rotationDeg, Vector2 scale)
@@ -258,21 +333,58 @@ public class NewCylinderController : MonoBehaviour
         return Vector3.Cross(side1, side2);
     }
 
+    private void UpdateControllerVisuals()
+    {
+        if (controllers == null)
+            return;
+
+        selectableColumn = Mathf.Clamp(selectableColumn, 0, Math.Max(1, resolution) - 1);
+
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            if (controllers[i] == null)
+                continue;
+
+            int col = i % resolution;
+            Renderer rend = controllers[i].GetComponent<Renderer>();
+            if (rend == null) rend = controllers[i].GetComponentInChildren<Renderer>();
+            if (rend != null)
+            {
+                Color c = (col == selectableColumn) ? selectableColor : unselectableColor;
+                if (Application.isPlaying)
+                {
+                    rend.material = new Material(rend.material) { color = c };
+                }
+                else
+                {
+                    rend.sharedMaterial.color = c;
+                }
+            }
+            Collider coll = controllers[i].GetComponent<Collider>();
+            if (coll == null) coll = controllers[i].GetComponentInChildren<Collider>();
+            coll.enabled = (col == selectableColumn);
+        }
+    }
+
     public void HideAllControllers()
     {
         ControllersVisible = false;
+        if (controllers == null) return;
         foreach (var controller in controllers)
         {
-            controller.SetActive(false);
+            if (controller != null)
+                controller.SetActive(false);
         }
     }
 
     public void ShowAllControllers()
     {
         ControllersVisible = true;
+        if (controllers == null) return;
         foreach (var controller in controllers)
         {
-            controller.SetActive(true);
+            if (controller != null)
+                controller.SetActive(true);
         }
     }
     #endregion
@@ -280,13 +392,70 @@ public class NewCylinderController : MonoBehaviour
     public void SetResolution(int resolution)
     {
         this.resolution = resolution;
+        selectableColumn = Mathf.Clamp(selectableColumn, 0, Mathf.Max(1, this.resolution) - 1);
         SetMesh();
+        onResolutionChanged?.Invoke(this.resolution);
     }
 
     public void SetSweepAngle(int angle)
     {
         sweepDegrees = angle;
-        SetMesh();
+
+        if (controllers == null || controllers.Length == 0)
+        {
+            SetMesh();
+            return;
+        }
+
+        ApplySweepPreservingDeformations();
+    }
+    private void ApplySweepPreservingDeformations()
+    {
+        Vector3[] vertices = mesh.vertices;
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            if (controllers[i] == null) continue;
+            int col = i % resolution;
+            Vector3 cur = controllers[i].transform.localPosition;
+            float y = cur.y;
+            Vector2 curXZ = new Vector2(cur.x, cur.z);
+            float radiusAtVertex = curXZ.magnitude;
+            float t = (resolution > 1) ? (col / (float)(resolution - 1)) : 0f;
+            float angleDeg = t * sweepDegrees;
+            float angleRad = angleDeg * Mathf.Deg2Rad;
+            float newX = Mathf.Cos(angleRad) * radiusAtVertex;
+            float newZ = Mathf.Sin(angleRad) * radiusAtVertex;
+            Vector3 newLocalPos = new Vector3(newX, y, newZ);
+            controllers[i].transform.localPosition = newLocalPos;
+            vertices[i] = newLocalPos;
+        }
+        mesh.vertices = vertices;
+        RecalculateNormals();
+
+        if (normalLines != null)
+        {
+            for (int i = 0; i < normalLines.Length; i++)
+            {
+                if (normalLines[i] == null) continue;
+                normalLines[i].transform.localRotation = Quaternion.FromToRotation(Vector3.up, mesh.normals[i]);
+            }
+        }
+
+        if (lastControllerPositions == null || lastControllerPositions.Length != controllers.Length)
+            lastControllerPositions = new Vector3[controllers.Length];
+
+        for (int i = 0; i < controllers.Length; i++)
+        {
+            if (controllers[i] == null) continue;
+            lastControllerPositions[i] = controllers[i].transform.localPosition;
+        }
+        onMeshUpdated?.Invoke();
+    }
+
+    public void SetSelectableColumn(int column)
+    {
+        selectableColumn = Mathf.Clamp(column, 0, Mathf.Max(1, resolution) - 1);
+        UpdateControllerVisuals();
     }
 
     private void OnEnable()
