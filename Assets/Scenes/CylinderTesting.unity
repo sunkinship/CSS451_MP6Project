@@ -2637,7 +2637,7 @@ GameObject:
   - component: {fileID: 593478115}
   - component: {fileID: 593478114}
   m_Layer: 5
-  m_Name: Cylinder Selectable Row Panel
+  m_Name: Cylinder Selectable Column Panel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -8150,7 +8150,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Cylinder Selectable Row
+  m_text: Cylinder Selectable Column
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -8177,8 +8177,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 28
+  m_fontSizeBase: 28
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -8689,7 +8689,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1747794366}
   m_Layer: 5
-  m_Name: Cylinder Selectable Row Slider
+  m_Name: Cylinder Selectable Column Slider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
